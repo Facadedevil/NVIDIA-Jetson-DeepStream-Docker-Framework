@@ -24,77 +24,77 @@ ENV PYTHONUNBUFFERED=1 \
     DEBIAN_FRONTEND=noninteractive \
     TZ=UTC
 
-# Install system dependencies - organized by purpose
-# Pin versions and consolidate RUN commands to reduce layers
+# Install system dependencies - avoid pinning for CI build stability
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # Build tools
-    build-essential=12.8ubuntu1.1 \
-    cmake=3.16.3-1ubuntu1 \
-    pkg-config=0.29.1-0ubuntu4 \
-    wget=1.20.3-1ubuntu2 \
-    unzip=6.0-25ubuntu1.1 \
-    yasm=1.3.0-2ubuntu1 \
-    checkinstall=1.6.2+git20170426.0ae2d32-1 \
-    git=1:2.25.1-1ubuntu3.11 \
-    gfortran=4:9.3.0-1ubuntu2 \
+    build-essential \
+    cmake \
+    pkg-config \
+    wget \
+    unzip \
+    yasm \
+    checkinstall \
+    git \
+    gfortran \
     # Python
-    python3-dev=3.8.2-0ubuntu2 \
-    python3-pip=20.0.2-5ubuntu1.8 \
-    python3-numpy=1:1.17.4-5ubuntu3 \
-    python3-tk=3.8.2-0ubuntu2 \
-    tk-dev=8.6.9+1 \
-    python3-pil.imagetk=7.0.0-4ubuntu0.7 \
+    python3-dev \
+    python3-pip \
+    python3-numpy \
+    python3-tk \
+    tk-dev \
+    python3-pil.imagetk \
     # Libraries
-    libopenmpi-dev=4.0.3-0ubuntu1 \
-    libopenblas-base=0.3.8+ds-1ubuntu0.20.04.1 \
-    libomp-dev=1:10.0-50~exp1 \
-    libglib2.0-0=2.64.6-1~ubuntu20.04.4 \
-    libsm6=2:1.2.3-1 \
-    libxext6=2:1.3.4-0ubuntu1 \
-    libxrender-dev=1:0.9.10-1 \
-    libgl1-mesa-glx=21.2.6-0ubuntu0.1~20.04.2 \
-    libreadline-dev=8.0-4 \
-    libncurses5-dev=6.2-0ubuntu2 \
-    libncursesw5-dev=6.2-0ubuntu2 \
+    libopenmpi-dev \
+    libopenblas-base \
+    libomp-dev \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgl1-mesa-glx \
+    libreadline-dev \
+    libncurses5-dev \
+    libncursesw5-dev \
     # X11 
-    x11-apps=7.7+8 \
-    xauth=1:1.1-0ubuntu1 \
-    xterm=353-1ubuntu1.20.04.2 \
+    x11-apps \
+    xauth \
+    xterm \
     # GStreamer
-    libgstreamer1.0-dev=1.16.2-2 \
-    libgstreamer-plugins-base1.0-dev=1.16.2-4ubuntu0.1 \
-    libgstreamer-plugins-good1.0-dev=1.16.2-1ubuntu2.1 \
-    libgstreamer-plugins-bad1.0-dev=1.16.2-2.1ubuntu1 \
-    gstreamer1.0-plugins-base=1.16.2-4ubuntu0.1 \
-    gstreamer1.0-plugins-good=1.16.2-1ubuntu2.1 \
-    gstreamer1.0-plugins-bad=1.16.2-2.1ubuntu1 \
-    gstreamer1.0-plugins-ugly=1.16.2-2 \
-    gstreamer1.0-libav=1.16.2-2 \
-    gstreamer1.0-tools=1.16.2-2 \
-    libgstrtspserver-1.0-0=1.16.2-1 \
+    libgstreamer1.0-dev \
+    libgstreamer-plugins-base1.0-dev \
+    libgstreamer-plugins-good1.0-dev \
+    libgstreamer-plugins-bad1.0-dev \
+    gstreamer1.0-plugins-base \
+    gstreamer1.0-plugins-good \
+    gstreamer1.0-plugins-bad \
+    gstreamer1.0-plugins-ugly \
+    gstreamer1.0-libav \
+    gstreamer1.0-tools \
+    libgstrtspserver-1.0-0 \
     # Video processing
-    libavcodec-dev=7:4.2.4-1ubuntu0.1 \
-    libavformat-dev=7:4.2.4-1ubuntu0.1 \
-    libswscale-dev=7:4.2.4-1ubuntu0.1 \
-    libv4l-dev=1.18.0-2build1 \
-    libxvidcore-dev=2:1.3.7-1 \
-    libx264-dev=2:0.155.2917+git0a84d98-2 \
-    libjpeg-dev=8c-2ubuntu8 \
-    libpng-dev=1.6.37-2 \
-    libtiff-dev=4.1.0+git191117-2ubuntu0.20.04.8 \
-    ffmpeg=7:4.2.4-1ubuntu0.1 \
+    libavcodec-dev \
+    libavformat-dev \
+    libswscale-dev \
+    libv4l-dev \
+    libxvidcore-dev \
+    libx264-dev \
+    libjpeg-dev \
+    libpng-dev \
+    libtiff-dev \
+    ffmpeg \
     # Additional libraries
-    libtbb-dev=2020.0-2 \
-    libtbb2=2020.0-2 \
-    libdc1394-22-dev=2.2.5-2.1 \
-    libjansson4=2.12-1build1 \
-    libjsoncpp-dev=1.7.4-3.1ubuntu2 \
-    libssl-dev=1.1.1f-1ubuntu2.19 \
-    libyaml-cpp-dev=0.6.2-4ubuntu1 \
+    libtbb-dev \
+    libtbb2 \
+    libdc1394-22-dev \
+    libjansson4 \
+    libjsoncpp-dev \
+    libssl-dev \
+    libyaml-cpp-dev \
     # Health monitoring tools
-    htop=2.2.0-2build1 \
-    pciutils=1:3.6.4-1 \
-    lm-sensors=1:3.6.0-2ubuntu1 \
+    htop \
+    pciutils \
+    lm-sensors \
     && rm -rf /var/lib/apt/lists/*
 
 # Stage 2: Build OpenCV with CUDA
@@ -144,16 +144,17 @@ FROM base AS ffmpeg-builder
 
 WORKDIR /opt
 
-# Install FFmpeg build dependencies
+# Install FFmpeg build dependencies - avoid pinning for CI build stability
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    nasm=2.14.02-1 \
-    libx264-dev=2:0.155.2917+git0a84d98-2 \
-    libx265-dev=3.2.1-1build1 \
-    libnuma-dev=2.0.12-1 \
-    libvpx-dev=1.8.2-1build1 \
-    libfdk-aac-dev=2.0.1-1 \
-    libmp3lame-dev=3.100-3 \
-    libopus-dev=1.3.1-0ubuntu1 \
+    nasm \
+    libx264-dev \
+    libx265-dev \
+    libnuma-dev \
+    libvpx-dev \
+    libfdk-aac-dev \
+    libmp3lame-dev \
+    libopus-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN git clone --depth 1 https://git.ffmpeg.org/ffmpeg.git
@@ -211,11 +212,12 @@ ENV CUDA_HOME=/usr/local/cuda \
 
 # Install Python packages
 COPY requirements.txt /tmp/requirements.txt
-RUN python3 -m pip install --upgrade pip==23.0.1 setuptools==67.6.1 wheel==0.40.0 && \
+# hadolint ignore=DL3013
+RUN python3 -m pip install --upgrade pip wheel setuptools && \
     # Install PyTorch and torchvision for Jetson
     python3 -m pip install --no-cache-dir \
         --extra-index-url https://developer.download.nvidia.com/compute/redist/jp/v511 \
-        nvidia-pyindex==1.0.9 \
+        nvidia-pyindex \
         "torch==${PYTORCH_VERSION}" \
         "torchvision==${TORCHVISION_VERSION}" && \
     # Install TensorFlow with GPU support for Jetson
@@ -268,7 +270,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD test -f /sys/devices/gpu.0/load || exit 1
 
 # Add entrypoint script
-COPY entrypoint.sh /entrypoint.sh
+COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Cleanup to reduce image size
