@@ -1,5 +1,5 @@
 # Multi-stage build for NVIDIA Jetson DeepStream Docker Framework
-ARG JETPACK_BASE=nvcr.io/nvidia/l4t-jetpack:r35.4.1
+ARG JETPACK_BASE=nvcr.io/nvidia/l4t-jetpack:r35.4.1@sha256:f9918f8a954cae6bb94339604db76dd0f0c37f745035a2573afcf81c6a064d2f
 ARG OPENCV_VERSION=4.8.0
 ARG CUDA_ARCH_BIN=7.2
 ARG PYTORCH_VERSION=2.1.0a0+41361538.nv23.06
@@ -106,9 +106,11 @@ WORKDIR /opt
 
 # Clone and build OpenCV with CUDA support
 RUN git clone --depth 1 --branch "${OPENCV_VERSION}" https://github.com/opencv/opencv.git && \
-    git clone --depth 1 --branch "${OPENCV_VERSION}" https://github.com/opencv/opencv_contrib.git && \
-    mkdir -p opencv/build && cd opencv/build && \
-    cmake \
+    git clone --depth 1 --branch "${OPENCV_VERSION}" https://github.com/opencv/opencv_contrib.git
+
+WORKDIR /opt/opencv/build
+
+RUN cmake \
       -D CMAKE_BUILD_TYPE=RELEASE \
       -D CMAKE_INSTALL_PREFIX=/usr/local \
       -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules \
@@ -153,10 +155,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libopus-dev=1.3.1-0ubuntu1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Build FFmpeg with NVIDIA hardware acceleration
-RUN git clone --depth 1 https://git.ffmpeg.org/ffmpeg.git && \
-    cd ffmpeg && \
-    ./configure \
+RUN git clone --depth 1 https://git.ffmpeg.org/ffmpeg.git
+
+WORKDIR /opt/ffmpeg
+
+RUN ./configure \
       --enable-nonfree \
       --enable-gpl \
       --enable-libx264 \
@@ -207,25 +210,25 @@ ENV CUDA_HOME=/usr/local/cuda \
 
 # Install Python packages
 COPY requirements.txt /tmp/requirements.txt
-RUN python3 -m pip install --upgrade pip setuptools wheel && \
+RUN python3 -m pip install --upgrade pip==23.0.1 setuptools==67.6.1 wheel==0.40.0 && \
     # Install PyTorch and torchvision for Jetson
-    python3 -m pip install --no-cache \
+    python3 -m pip install --no-cache-dir \
         --extra-index-url https://developer.download.nvidia.com/compute/redist/jp/v511 \
-        nvidia-pyindex \
+        nvidia-pyindex==1.0.9 \
         "torch==${PYTORCH_VERSION}" \
         "torchvision==${TORCHVISION_VERSION}" && \
     # Install TensorFlow with GPU support for Jetson
-    python3 -m pip install --no-cache \
+    python3 -m pip install --no-cache-dir \
         --extra-index-url https://developer.download.nvidia.com/compute/redist/jp/v511 \
         tensorflow==2.11.0+nv23.01 && \
     # Install ONNX Runtime with GPU support
-    python3 -m pip install --no-cache onnxruntime-gpu==1.15.1 && \
+    python3 -m pip install --no-cache-dir onnxruntime-gpu==1.15.1 && \
     # Install TensorFlow Lite with GPU support
-    python3 -m pip install --no-cache tflite-runtime==2.14.0 && \
+    python3 -m pip install --no-cache-dir tflite-runtime==2.14.0 && \
     # Install other Python packages from requirements.txt
-    python3 -m pip install -r /tmp/requirements.txt && \
+    python3 -m pip install --no-cache-dir -r /tmp/requirements.txt && \
     # Install additional ML dependencies with CUDA support
-    python3 -m pip install --no-cache \
+    python3 -m pip install --no-cache-dir \
         cupy-cuda11x==11.6.0 \
         numba==0.56.4 \
         pycuda==2023.1 \
@@ -244,7 +247,7 @@ RUN useradd -m -s /bin/bash user && \
     chown -R user:user /workspace
 
 # Create directories for mounting
-RUN mkdir -p /opt/nvidia/deepstream /workspace/{src,models,config,logs,custom} && \
+RUN mkdir -p /opt/nvidia/deepstream /workspace/src /workspace/models /workspace/config /workspace/logs /workspace/custom && \
     chown -R user:user /workspace
 
 # Setup symbolic links for DeepStream that will be mounted from host
@@ -261,7 +264,7 @@ WORKDIR /workspace
 
 # Docker health check for Jetson devices
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD [ -f /sys/devices/gpu.0/load ] || exit 1
+    CMD test -f /sys/devices/gpu.0/load || exit 1
 
 # Add entrypoint script
 COPY docker/entrypoint.sh /entrypoint.sh
