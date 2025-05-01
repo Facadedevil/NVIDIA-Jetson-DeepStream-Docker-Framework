@@ -6,7 +6,7 @@ ARG PYTORCH_VERSION=2.1.0a0+41361538.nv23.06
 ARG TORCHVISION_VERSION=0.16.0a0+0631c26.nv23.06
 
 # Stage 1: Base image with system dependencies
-FROM ${JETPACK_BASE} as base
+FROM ${JETPACK_BASE} AS base
 
 # Labels for container metadata (OCI standards)
 LABEL org.opencontainers.image.title="NVIDIA Jetson DeepStream Container"
@@ -24,87 +24,90 @@ ENV PYTHONUNBUFFERED=1 \
     TZ=UTC
 
 # Install system dependencies - organized by purpose
+# Pin versions and consolidate RUN commands to reduce layers
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # Build tools
-    build-essential \
-    cmake \
-    pkg-config \
-    wget \
-    unzip \
-    yasm \
-    checkinstall \
-    git \
-    gfortran \
+    build-essential=12.8ubuntu1.1 \
+    cmake=3.16.3-1ubuntu1 \
+    pkg-config=0.29.1-0ubuntu4 \
+    wget=1.20.3-1ubuntu2 \
+    unzip=6.0-25ubuntu1.1 \
+    yasm=1.3.0-2ubuntu1 \
+    checkinstall=1.6.2+git20170426.0ae2d32-1 \
+    git=1:2.25.1-1ubuntu3.11 \
+    gfortran=4:9.3.0-1ubuntu2 \
     # Python
-    python3-dev \
-    python3-pip \
-    python3-numpy \
-    python3-tk \
-    tk-dev \
-    python3-pil.imagetk \
+    python3-dev=3.8.2-0ubuntu2 \
+    python3-pip=20.0.2-5ubuntu1.8 \
+    python3-numpy=1:1.17.4-5ubuntu3 \
+    python3-tk=3.8.2-0ubuntu2 \
+    tk-dev=8.6.9+1 \
+    python3-pil.imagetk=7.0.0-4ubuntu0.7 \
     # Libraries
-    libopenmpi-dev \
-    libopenblas-base \
-    libomp-dev \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender-dev \
-    libgl1-mesa-glx \
-    libreadline-dev \
-    libncurses5-dev \
-    libncursesw5-dev \
+    libopenmpi-dev=4.0.3-0ubuntu1 \
+    libopenblas-base=0.3.8+ds-1ubuntu0.20.04.1 \
+    libomp-dev=1:10.0-50~exp1 \
+    libglib2.0-0=2.64.6-1~ubuntu20.04.4 \
+    libsm6=2:1.2.3-1 \
+    libxext6=2:1.3.4-0ubuntu1 \
+    libxrender-dev=1:0.9.10-1 \
+    libgl1-mesa-glx=21.2.6-0ubuntu0.1~20.04.2 \
+    libreadline-dev=8.0-4 \
+    libncurses5-dev=6.2-0ubuntu2 \
+    libncursesw5-dev=6.2-0ubuntu2 \
     # X11 
-    x11-apps \
-    xauth \
-    xterm \
+    x11-apps=7.7+8 \
+    xauth=1:1.1-0ubuntu1 \
+    xterm=353-1ubuntu1.20.04.2 \
     # GStreamer
-    libgstreamer1.0-dev \
-    libgstreamer-plugins-base1.0-dev \
-    libgstreamer-plugins-good1.0-dev \
-    libgstreamer-plugins-bad1.0-dev \
-    gstreamer1.0-plugins-base \
-    gstreamer1.0-plugins-good \
-    gstreamer1.0-plugins-bad \
-    gstreamer1.0-plugins-ugly \
-    gstreamer1.0-libav \
-    gstreamer1.0-tools \
-    libgstrtspserver-1.0-0 \
+    libgstreamer1.0-dev=1.16.2-2 \
+    libgstreamer-plugins-base1.0-dev=1.16.2-4ubuntu0.1 \
+    libgstreamer-plugins-good1.0-dev=1.16.2-1ubuntu2.1 \
+    libgstreamer-plugins-bad1.0-dev=1.16.2-2.1ubuntu1 \
+    gstreamer1.0-plugins-base=1.16.2-4ubuntu0.1 \
+    gstreamer1.0-plugins-good=1.16.2-1ubuntu2.1 \
+    gstreamer1.0-plugins-bad=1.16.2-2.1ubuntu1 \
+    gstreamer1.0-plugins-ugly=1.16.2-2 \
+    gstreamer1.0-libav=1.16.2-2 \
+    gstreamer1.0-tools=1.16.2-2 \
+    libgstrtspserver-1.0-0=1.16.2-1 \
     # Video processing
-    libavcodec-dev \
-    libavformat-dev \
-    libswscale-dev \
-    libv4l-dev \
-    libxvidcore-dev \
-    libx264-dev \
-    libjpeg-dev \
-    libpng-dev \
-    libtiff-dev \
-    ffmpeg \
+    libavcodec-dev=7:4.2.4-1ubuntu0.1 \
+    libavformat-dev=7:4.2.4-1ubuntu0.1 \
+    libswscale-dev=7:4.2.4-1ubuntu0.1 \
+    libv4l-dev=1.18.0-2build1 \
+    libxvidcore-dev=2:1.3.7-1 \
+    libx264-dev=2:0.155.2917+git0a84d98-2 \
+    libjpeg-dev=8c-2ubuntu8 \
+    libpng-dev=1.6.37-2 \
+    libtiff-dev=4.1.0+git191117-2ubuntu0.20.04.8 \
+    ffmpeg=7:4.2.4-1ubuntu0.1 \
     # Additional libraries
-    libtbb-dev \
-    libtbb2 \
-    libdc1394-22-dev \
-    libjansson4 \
-    libjsoncpp-dev \
-    libssl-dev \
-    libyaml-cpp-dev \
+    libtbb-dev=2020.0-2 \
+    libtbb2=2020.0-2 \
+    libdc1394-22-dev=2.2.5-2.1 \
+    libjansson4=2.12-1build1 \
+    libjsoncpp-dev=1.7.4-3.1ubuntu2 \
+    libssl-dev=1.1.1f-1ubuntu2.19 \
+    libyaml-cpp-dev=0.6.2-4ubuntu1 \
     # Health monitoring tools
-    htop \
-    pciutils \
-    lm-sensors \
+    htop=2.2.0-2build1 \
+    pciutils=1:3.6.4-1 \
+    lm-sensors=1:3.6.0-2ubuntu1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Stage 2: Build OpenCV with CUDA
-FROM base as opencv-builder
+FROM base AS opencv-builder
 
 ARG OPENCV_VERSION
 ARG CUDA_ARCH_BIN
 
 WORKDIR /opt
-RUN git clone --depth 1 --branch ${OPENCV_VERSION} https://github.com/opencv/opencv.git && \
-    git clone --depth 1 --branch ${OPENCV_VERSION} https://github.com/opencv/opencv_contrib.git && \
-    cd opencv && mkdir build && cd build && \
+
+# Clone and build OpenCV with CUDA support
+RUN git clone --depth 1 --branch "${OPENCV_VERSION}" https://github.com/opencv/opencv.git && \
+    git clone --depth 1 --branch "${OPENCV_VERSION}" https://github.com/opencv/opencv_contrib.git && \
+    mkdir -p opencv/build && cd opencv/build && \
     cmake \
       -D CMAKE_BUILD_TYPE=RELEASE \
       -D CMAKE_INSTALL_PREFIX=/usr/local \
@@ -115,7 +118,7 @@ RUN git clone --depth 1 --branch ${OPENCV_VERSION} https://github.com/opencv/ope
       -D OPENCV_DNN_CUDA=ON \
       -D WITH_NVCUVID=ON \
       -D WITH_NVENC=ON \
-      -D CUDA_ARCH_BIN=${CUDA_ARCH_BIN} \
+      -D CUDA_ARCH_BIN="${CUDA_ARCH_BIN}" \
       -D ENABLE_FAST_MATH=1 \
       -D CUDA_FAST_MATH=1 \
       -D WITH_CUBLAS=1 \
@@ -129,25 +132,28 @@ RUN git clone --depth 1 --branch ${OPENCV_VERSION} https://github.com/opencv/ope
       -D BUILD_EXAMPLES=OFF \
       -D OPENCV_ENABLE_NONFREE=ON \
       .. && \
-    make -j$(nproc) && \
+    make -j"$(nproc)" && \
     make install && \
     ldconfig
 
 # Stage 3: Build FFmpeg with CUDA and NVENC support
-FROM base as ffmpeg-builder
+FROM base AS ffmpeg-builder
 
 WORKDIR /opt
+
+# Install FFmpeg build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    nasm \
-    libx264-dev \
-    libx265-dev \
-    libnuma-dev \
-    libvpx-dev \
-    libfdk-aac-dev \
-    libmp3lame-dev \
-    libopus-dev \
+    nasm=2.14.02-1 \
+    libx264-dev=2:0.155.2917+git0a84d98-2 \
+    libx265-dev=3.2.1-1build1 \
+    libnuma-dev=2.0.12-1 \
+    libvpx-dev=1.8.2-1build1 \
+    libfdk-aac-dev=2.0.1-1 \
+    libmp3lame-dev=3.100-3 \
+    libopus-dev=1.3.1-0ubuntu1 \
     && rm -rf /var/lib/apt/lists/*
 
+# Build FFmpeg with NVIDIA hardware acceleration
 RUN git clone --depth 1 https://git.ffmpeg.org/ffmpeg.git && \
     cd ffmpeg && \
     ./configure \
@@ -159,14 +165,14 @@ RUN git clone --depth 1 https://git.ffmpeg.org/ffmpeg.git && \
       --enable-cuvid \
       --enable-nvenc \
       --enable-libnpp \
-      --extra-cflags=-I/usr/local/cuda/include \
-      --extra-ldflags=-L/usr/local/cuda/lib64 \
+      --extra-cflags="-I/usr/local/cuda/include" \
+      --extra-ldflags="-L/usr/local/cuda/lib64" \
       --prefix=/usr/local && \
-    make -j$(nproc) && \
+    make -j"$(nproc)" && \
     make install
 
 # Stage 4: Final image
-FROM base as final
+FROM base AS final
 
 ARG PYTORCH_VERSION
 ARG TORCHVISION_VERSION
@@ -199,37 +205,33 @@ ENV CUDA_HOME=/usr/local/cuda \
     # Jetson-specific variables
     JETSON_MULTITHREADING=true
 
-# Install Python packages (Dependency Management)
+# Install Python packages
 COPY requirements.txt /tmp/requirements.txt
-RUN python3 -m pip install --upgrade pip setuptools wheel
-
-# Install PyTorch and torchvision specifically for Jetson with CUDA support
-RUN python3 -m pip install --no-cache \
-    --extra-index-url https://developer.download.nvidia.com/compute/redist/jp/v511 \
-    nvidia-pyindex \
-    torch==${PYTORCH_VERSION} \
-    torchvision==${TORCHVISION_VERSION}
-
-# Install TensorFlow with GPU support for Jetson
-RUN python3 -m pip install --no-cache \
-    --extra-index-url https://developer.download.nvidia.com/compute/redist/jp/v511 \
-    tensorflow==2.11.0+nv23.01
-
-# Install ONNX Runtime with GPU support
-RUN python3 -m pip install --no-cache onnxruntime-gpu==1.15.1
-
-# Install TensorFlow Lite with GPU support
-RUN python3 -m pip install --no-cache tflite-runtime==2.14.0
-
-# Install other Python packages from requirements.txt
-RUN python3 -m pip install -r /tmp/requirements.txt
-
-# Install additional ML dependencies with CUDA support
-RUN python3 -m pip install --no-cache \
-    cupy-cuda11x \
-    numba \
-    pycuda \
-    ultralytics==8.0.196
+RUN python3 -m pip install --upgrade pip setuptools wheel && \
+    # Install PyTorch and torchvision for Jetson
+    python3 -m pip install --no-cache \
+        --extra-index-url https://developer.download.nvidia.com/compute/redist/jp/v511 \
+        nvidia-pyindex \
+        "torch==${PYTORCH_VERSION}" \
+        "torchvision==${TORCHVISION_VERSION}" && \
+    # Install TensorFlow with GPU support for Jetson
+    python3 -m pip install --no-cache \
+        --extra-index-url https://developer.download.nvidia.com/compute/redist/jp/v511 \
+        tensorflow==2.11.0+nv23.01 && \
+    # Install ONNX Runtime with GPU support
+    python3 -m pip install --no-cache onnxruntime-gpu==1.15.1 && \
+    # Install TensorFlow Lite with GPU support
+    python3 -m pip install --no-cache tflite-runtime==2.14.0 && \
+    # Install other Python packages from requirements.txt
+    python3 -m pip install -r /tmp/requirements.txt && \
+    # Install additional ML dependencies with CUDA support
+    python3 -m pip install --no-cache \
+        cupy-cuda11x==11.6.0 \
+        numba==0.56.4 \
+        pycuda==2023.1 \
+        ultralytics==8.0.196 && \
+    # Cleanup to reduce image size
+    rm -rf /tmp/requirements.txt
 
 # Set up display environment variables
 ENV DISPLAY=:0 \
@@ -247,23 +249,17 @@ RUN mkdir -p /opt/nvidia/deepstream /workspace/{src,models,config,logs,custom} &
 
 # Setup symbolic links for DeepStream that will be mounted from host
 RUN mkdir -p /opt/nvidia/deepstream/deepstream-6.2/lib && \
-    # Create placeholder symlinks - these will be properly set by entrypoint.sh
     touch /opt/nvidia/deepstream/deepstream-6.2/lib/libnvbufsurface.so && \
     touch /opt/nvidia/deepstream/deepstream-6.2/lib/libnvbufsurftransform.so
 
-# Create cache cleanup script
-RUN echo '#!/bin/bash\n\
-apt-get clean\n\
-rm -rf /var/lib/apt/lists/*\n\
-find /tmp -type f -delete\n\
-find /var/tmp -type f -delete\n\
-rm -rf ~/.cache/pip' > /usr/local/bin/cleanup-cache && \
+# Create cache cleanup script using printf instead of echo
+RUN printf '#!/bin/bash\napt-get clean\nrm -rf /var/lib/apt/lists/*\nfind /tmp -type f -delete\nfind /var/tmp -type f -delete\nrm -rf ~/.cache/pip\n' > /usr/local/bin/cleanup-cache && \
     chmod +x /usr/local/bin/cleanup-cache
 
 # Set working directory
 WORKDIR /workspace
 
-# Docker health check - Updated for all Jetson platforms
+# Docker health check for Jetson devices
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD [ -f /sys/devices/gpu.0/load ] || exit 1
 
