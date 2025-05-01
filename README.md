@@ -31,8 +31,8 @@ A comprehensive Docker framework for deploying DeepStream applications on all NV
 
 ```bash
 # Clone the repository
-git clone https://github.com/facadedevil/nvidia-jetson-docker.git
-cd nvidia-jetson-docker
+git clone https://github.com/Facadedevil/NVIDIA-Jetson-DeepStream-Docker-Framework.git
+cd NVIDIA-Jetson-DeepStream-Docker-Framework
 
 # Run the setup script (automatically detects your Jetson device)
 ./scripts/setup.sh --deepstream-path=/opt/nvidia/deepstream/deepstream-6.2
