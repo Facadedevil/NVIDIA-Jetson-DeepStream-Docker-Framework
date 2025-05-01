@@ -136,47 +136,7 @@ RUN (cmake \
     make install && \
     ldconfig) || echo "OpenCV build failed, continuing with base version"
 
-# Stage 3: Build FFmpeg with CUDA and NVENC support
-FROM base AS ffmpeg-builder
-
-WORKDIR /opt
-
-# Install FFmpeg build dependencies - avoid pinning for CI build stability
-# hadolint ignore=DL3008
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    nasm \
-    libx264-dev \
-    libx265-dev \
-    libnuma-dev \
-    libvpx-dev \
-    libfdk-aac-dev \
-    libmp3lame-dev \
-    libopus-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Continue on error for CI compatibility
-RUN git clone --depth 1 https://git.ffmpeg.org/ffmpeg.git || true
-
-WORKDIR /opt/ffmpeg
-
-# Continue on error for CI compatibility
-# hadolint ignore=SC3037,SC2086,DL4006
-RUN (./configure \
-      --enable-nonfree \
-      --enable-gpl \
-      --enable-libx264 \
-      --enable-libx265 \
-      --enable-cuda \
-      --enable-cuvid \
-      --enable-nvenc \
-      --enable-libnpp \
-      --extra-cflags="-I/usr/local/cuda/include" \
-      --extra-ldflags="-L/usr/local/cuda/lib64" \
-      --prefix=/usr/local && \
-    make -j"$(nproc)" && \
-    make install) || echo "FFmpeg build failed, continuing with base version"
-
-# Stage 4: Final image
+# Final image
 FROM base AS final
 
 ARG PYTORCH_VERSION
@@ -186,7 +146,7 @@ WORKDIR /usr/local
 
 # Check if directories exist and create them for error-free copying
 # hadolint ignore=SC2015
-RUN mkdir -p lib include bin share/opencv4 share/ffmpeg
+RUN mkdir -p lib include bin share/opencv4
 
 # Copy OpenCV from builder stage if build succeeded
 # hadolint ignore=SC2015,DL3022
@@ -194,13 +154,6 @@ COPY --from=opencv-builder /usr/local/lib/ /usr/local/lib/
 COPY --from=opencv-builder /usr/local/include/ /usr/local/include/
 COPY --from=opencv-builder /usr/local/bin/ /usr/local/bin/
 COPY --from=opencv-builder /usr/local/share/opencv4/ /usr/local/share/opencv4/
-
-# Copy FFmpeg with NVIDIA capabilities if build succeeded
-# hadolint ignore=SC2015,DL3022
-COPY --from=ffmpeg-builder /usr/local/bin/ /usr/local/bin/
-COPY --from=ffmpeg-builder /usr/local/lib/ /usr/local/lib/
-COPY --from=ffmpeg-builder /usr/local/include/ /usr/local/include/
-COPY --from=ffmpeg-builder /usr/local/share/ffmpeg/ /usr/local/share/ffmpeg/
 
 # Set CUDA and DeepStream environment variables
 ENV CUDA_HOME=/usr/local/cuda \
@@ -279,7 +232,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD test -f /sys/devices/gpu.0/load || exit 1
 
 # Add entrypoint script
-COPY entrypoint.sh /entrypoint.sh
+COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Cleanup to reduce image size
