@@ -182,25 +182,25 @@ FROM base AS final
 ARG PYTORCH_VERSION
 ARG TORCHVISION_VERSION
 
-# Copy OpenCV from builder stage if build succeeded
-# Fallback to not copying if build failed
-# hadolint ignore=SC2015
-RUN if [ -d "/usr/local/lib/opencv4" ]; then \
-    mkdir -p /usr/local/lib/opencv4; \
-    fi
+WORKDIR /usr/local
 
+# Check if directories exist and create them for error-free copying
 # hadolint ignore=SC2015
-COPY --from=opencv-builder /usr/local/lib /usr/local/lib || true
-COPY --from=opencv-builder /usr/local/include /usr/local/include || true
-COPY --from=opencv-builder /usr/local/bin /usr/local/bin || true
-COPY --from=opencv-builder /usr/local/share/opencv4 /usr/local/share/opencv4 || true
+RUN mkdir -p lib include bin share/opencv4 share/ffmpeg
+
+# Copy OpenCV from builder stage if build succeeded
+# hadolint ignore=SC2015,DL3022
+COPY --from=opencv-builder /usr/local/lib/ /usr/local/lib/
+COPY --from=opencv-builder /usr/local/include/ /usr/local/include/
+COPY --from=opencv-builder /usr/local/bin/ /usr/local/bin/
+COPY --from=opencv-builder /usr/local/share/opencv4/ /usr/local/share/opencv4/
 
 # Copy FFmpeg with NVIDIA capabilities if build succeeded
-# Fallback to not copying if build failed
-COPY --from=ffmpeg-builder /usr/local/bin /usr/local/bin || true
-COPY --from=ffmpeg-builder /usr/local/lib /usr/local/lib || true
-COPY --from=ffmpeg-builder /usr/local/include /usr/local/include || true
-COPY --from=ffmpeg-builder /usr/local/share/ffmpeg /usr/local/share/ffmpeg || true
+# hadolint ignore=SC2015,DL3022
+COPY --from=ffmpeg-builder /usr/local/bin/ /usr/local/bin/
+COPY --from=ffmpeg-builder /usr/local/lib/ /usr/local/lib/
+COPY --from=ffmpeg-builder /usr/local/include/ /usr/local/include/
+COPY --from=ffmpeg-builder /usr/local/share/ffmpeg/ /usr/local/share/ffmpeg/
 
 # Set CUDA and DeepStream environment variables
 ENV CUDA_HOME=/usr/local/cuda \
@@ -217,6 +217,8 @@ ENV CUDA_HOME=/usr/local/cuda \
     TRT_FP16_ENABLED=true \
     # Jetson-specific variables
     JETSON_MULTITHREADING=true
+
+WORKDIR /workspace
 
 # Install Python packages
 COPY requirements.txt /tmp/requirements.txt
@@ -271,9 +273,6 @@ RUN mkdir -p /opt/nvidia/deepstream/deepstream-6.2/lib && \
 # Create cache cleanup script using printf instead of echo
 RUN printf '#!/bin/bash\napt-get clean\nrm -rf /var/lib/apt/lists/*\nfind /tmp -type f -delete\nfind /var/tmp -type f -delete\nrm -rf ~/.cache/pip\n' > /usr/local/bin/cleanup-cache && \
     chmod +x /usr/local/bin/cleanup-cache
-
-# Set working directory
-WORKDIR /workspace
 
 # Docker health check for Jetson devices
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
