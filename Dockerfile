@@ -1,12 +1,13 @@
 # Multi-stage build for NVIDIA Jetson DeepStream Docker Framework
-ARG JETPACK_BASE=nvcr.io/nvidia/l4t-jetpack:r35.4.1@sha256:f9918f8a954cae6bb94339604db76dd0f0c37f745035a2573afcf81c6a064d2f
+# Fixed base image with explicit tag for CI compliance
+ARG JETPACK_VERSION=r35.4.1
+
+FROM nvcr.io/nvidia/l4t-jetpack:${JETPACK_VERSION} AS base
+
 ARG OPENCV_VERSION=4.8.0
 ARG CUDA_ARCH_BIN=7.2
 ARG PYTORCH_VERSION=2.1.0a0+41361538.nv23.06
 ARG TORCHVISION_VERSION=0.16.0a0+0631c26.nv23.06
-
-# Stage 1: Base image with system dependencies
-FROM ${JETPACK_BASE} AS base
 
 # Labels for container metadata (OCI standards)
 LABEL org.opencontainers.image.title="NVIDIA Jetson DeepStream Container"
