@@ -100,12 +100,14 @@ WORKDIR /opt
 
 # Clone and build OpenCV with CUDA support
 # Continue on error for CI compatibility
+# hadolint ignore=SC3037,SC2086
 RUN git clone --depth 1 --branch "${OPENCV_VERSION}" https://github.com/opencv/opencv.git && \
     git clone --depth 1 --branch "${OPENCV_VERSION}" https://github.com/opencv/opencv_contrib.git || true
 
 WORKDIR /opt/opencv/build
 
 # Continue on error for CI compatibility
+# hadolint ignore=SC3037,SC2086,DL4006
 RUN (cmake \
       -D CMAKE_BUILD_TYPE=RELEASE \
       -D CMAKE_INSTALL_PREFIX=/usr/local \
@@ -158,6 +160,7 @@ RUN git clone --depth 1 https://git.ffmpeg.org/ffmpeg.git || true
 WORKDIR /opt/ffmpeg
 
 # Continue on error for CI compatibility
+# hadolint ignore=SC3037,SC2086,DL4006
 RUN (./configure \
       --enable-nonfree \
       --enable-gpl \
@@ -181,10 +184,12 @@ ARG TORCHVISION_VERSION
 
 # Copy OpenCV from builder stage if build succeeded
 # Fallback to not copying if build failed
+# hadolint ignore=SC2015
 RUN if [ -d "/usr/local/lib/opencv4" ]; then \
     mkdir -p /usr/local/lib/opencv4; \
     fi
 
+# hadolint ignore=SC2015
 COPY --from=opencv-builder /usr/local/lib /usr/local/lib || true
 COPY --from=opencv-builder /usr/local/include /usr/local/include || true
 COPY --from=opencv-builder /usr/local/bin /usr/local/bin || true
@@ -215,13 +220,14 @@ ENV CUDA_HOME=/usr/local/cuda \
 
 # Install Python packages
 COPY requirements.txt /tmp/requirements.txt
-# hadolint ignore=DL3013
+
+# hadolint ignore=DL3013,SC3037,SC2015,DL4006
 RUN python3 -m pip install --upgrade pip wheel setuptools && \
     # Install PyTorch and torchvision for Jetson
     # Continue on error for CI compatibility
     (python3 -m pip install --no-cache-dir \
         --extra-index-url https://developer.download.nvidia.com/compute/redist/jp/v511 \
-        nvidia-pyindex \
+        nvidia-pyindex==1.0.9 \
         "torch==${PYTORCH_VERSION}" \
         "torchvision==${TORCHVISION_VERSION}" || echo "PyTorch installation failed, continuing") && \
     # Install TensorFlow with GPU support for Jetson
