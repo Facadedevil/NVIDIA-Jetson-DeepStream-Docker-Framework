@@ -1,0 +1,66 @@
+app:
+  name: "DeepStream Application"
+  version: "1.0"
+  environment: "production"
+  log_level: "INFO"
+
+model:
+  name: "yolov8s"
+  input_size: [640, 640]
+  confidence_threshold: 0.5
+  nms_threshold: 0.4
+  classes: ["person"]
+  engine_format: "tensorrt"  # Options: tensorrt, onnx, tflite
+
+input:
+  source: "v4l2:///dev/video0"  # Can be camera, RTSP, or file
+  # source: "rtsp://camera-ip:port/stream"   # RTSP camera
+  # source: "file:///workspace/videos/input.mp4"   # Video file
+  width: 1920
+  height: 1080
+  fps: 30
+
+deepstream:
+  config_file: "config/deepstream_app_config.txt"
+  batch_size: 1
+  gpu_id: 0
+  streammux:
+    batch_size: 1
+    width: 1920
+    height: 1080
+    enable_padding: 0
+    nvbuf_memory_type: 0
+
+counter:
+  roi_config: "config/roi_config.json"
+  count_interval: 1  # seconds between counts
+  tracking:
+    max_disappeared: 30
+    max_distance: 50
+    min_detection_confidence: 0.6
+
+display:
+  enable: true
+  show_boxes: true
+  show_labels: true
+  show_counts: true
+  show_fps: true
+  font_size: 1
+  line_thickness: 2
+  overlay_format: "RGBA"
+
+logging:
+  level: "INFO"
+  count_log: "logs/count_log.csv"
+  system_metrics: "logs/system_metrics.csv"
+  app_log: "logs/app.log"
+
+monitoring:
+  enable: true
+  interval: 1  # seconds
+  metrics:
+    - gpu
+    - memory
+    - temperature
+
+# Extension points - Custom configurations can add sections here

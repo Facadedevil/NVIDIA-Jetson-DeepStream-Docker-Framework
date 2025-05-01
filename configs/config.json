@@ -1,0 +1,44 @@
+{
+    "regions": [
+        {
+            "id": 0,
+            "name": "Entrance",
+            "points": [
+                [100, 100],
+                [300, 100],
+                [300, 300],
+                [100, 300]
+            ],
+            "color": [0, 255, 0],
+            "counting_line": {
+                "start": [200, 100],
+                "end": [200, 300],
+                "direction": "both"
+            }
+        },
+        {
+            "id": 1,
+            "name": "Exit",
+            "points": [
+                [500, 100],
+                [700, 100],
+                [700, 300],
+                [500, 300]
+            ],
+            "color": [255, 0, 0],
+            "counting_line": {
+                "start": [600, 100],
+                "end": [600, 300],
+                "direction": "both"
+            }
+        }
+    ],
+    "settings": {
+        "count_interval": 1,
+        "min_detection_confidence": 0.6,
+        "tracking": {
+            "max_disappeared": 30,
+            "max_distance": 50
+        }
+    }
+}

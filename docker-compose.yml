@@ -1,0 +1,146 @@
+version: '2.4'
+
+# Extension fields for reusable configuration fragments
+x-common-settings: &common-settings
+  restart: unless-stopped
+  privileged: true
+  ipc: host
+  network_mode: host
+  ulimits:
+    memlock: -1
+    stack: 67108864
+  shm_size: '2gb'
+  security_opt:
+    - seccomp:unconfined
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "20m"
+      max-file: "5"
+      compress: "true"
+
+services:
+  jetson-app:
+    <<: *common-settings
+    image: ${REGISTRY:-ghcr.io}/${NAMESPACE:-facadedevil}/nvidia-jetson:${TAG:-latest}
+    container_name: ${CONTAINER_NAME:-nvidia-jetson-app}
+    # Allow container to be extended with additional build instructions
+    build:
+      context: .
+      dockerfile: ${DOCKERFILE:-docker/Dockerfile}
+      args:
+        # Base image configuration
+        - JETPACK_BASE=${JETPACK_BASE:-nvcr.io/nvidia/l4t-jetpack:r35.4.1}
+        - CUDA_ARCH_BIN=${CUDA_ARCH_BIN:-7.2}
+        - PYTORCH_VERSION=${PYTORCH_VERSION:-2.1.0}
+        - TENSORRT_VERSION=${TENSORRT_VERSION:-8.6.1}
+      # Enable BuildKit cache for faster rebuilds
+      cache_from:
+        - ${REGISTRY:-ghcr.io}/${NAMESPACE:-facadedevil}/nvidia-jetson:cache
+    environment:
+      # Display
+      - DISPLAY=${DISPLAY:-:0}
+      - XAUTHORITY=/tmp/.docker.xauth
+      # NVIDIA configuration
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
+      - NVIDIA_DRIVER_CAPABILITIES=${NVIDIA_DRIVER_CAPABILITIES:-compute,utility,graphics,video}
+      - CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
+      - CUDA_DEVICE_ORDER=PCI_BUS_ID
+      # DeepStream configuration
+      - DEEPSTREAM_PATH=${DEEPSTREAM_PATH:-/opt/nvidia/deepstream/deepstream-6.2}
+      # Application configuration
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      # GPU optimization
+      - OMP_NUM_THREADS=4
+      - OMP_DYNAMIC=TRUE
+    volumes:
+      # X11 display forwarding
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /tmp/.docker.xauth:/tmp/.docker.xauth:rw
+      
+      # NVIDIA libraries - Jetson specific paths
+      - /usr/local/cuda:/usr/local/cuda:ro
+      - /usr/lib/aarch64-linux-gnu:/usr/lib/aarch64-linux-gnu:ro
+      - /usr/lib/aarch64-linux-gnu/tegra:/usr/lib/aarch64-linux-gnu/tegra:ro
+      - /usr/sbin/tegrastats:/usr/sbin/tegrastats:ro
+      
+      # DeepStream SDK
+      - ${DEEPSTREAM_PATH:-/opt/nvidia/deepstream/deepstream-6.2}:${DEEPSTREAM_PATH:-/opt/nvidia/deepstream/deepstream-6.2}:ro
+      
+      # Application volumes
+      - ${SRC_DIR:-./src}:/workspace/src:ro
+      - ${MODELS_DIR:-./models}:/workspace/models:rw
+      - ${CONFIG_DIR:-./config}:/workspace/config:ro
+      - ${LOGS_DIR:-./logs}:/workspace/logs:rw
+      
+      # Custom extensions volume (for extending the container)
+      - ${CUSTOM_DIR:-./custom}:/workspace/custom:ro
+    devices:
+      # Common Jetson devices for all platforms
+      - /dev/nvhost-ctrl
+      - /dev/nvhost-ctrl-gpu
+      - /dev/nvhost-prof-gpu
+      - /dev/nvmap
+      - /dev/nvhost-gpu
+      - /dev/nvhost-as-gpu
+      - /dev/nvhost-vic
+      - /dev/nvhost-nvdec
+      - /dev/nvhost-nvenc
+      - /dev/nvhost-msenc
+      # Tegra X1/X2 devices 
+      - /dev/nvhost-tsec
+      - /dev/nvhost-tsecb
+      # Xavier specific devices
+      - /dev/nvhost-nvcsi
+      - /dev/nvhost-nvjpg
+      # Orin specific devices
+      - /dev/nvhost-nvdla0
+      - /dev/nvhost-nvdla1
+      - /dev/nvhost-pva0
+      - /dev/nvhost-pva1
+      # Generic device access
+      - /dev/nvhost-dbg-gpu
+      - /dev/nvgpu/igpu0/powergate
+      - /dev/tegra_dc_ctrl
+      # Video devices
+      - ${VIDEO_DEVICE:-/dev/video0}
+    working_dir: /workspace
+    command: ["python3", "-u", "/workspace/src/main.py"]
+    healthcheck:
+      # Updated for Jetson - no nvidia-smi
+      test: ["CMD-SHELL", "[ -f /sys/devices/gpu.0/load ] || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Optional monitoring service
+  monitoring:
+    <<: *common-settings
+    image: prom/node-exporter:latest
+    container_name: ${MONITORING_CONTAINER:-jetson-monitoring}
+    profiles:
+      - monitoring
+    command:
+      - '--path.rootfs=/host'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($|/)'
+    volumes:
+      - '/:/host:ro,rslave'
+    pid: host
+
+  # Jetson stats monitoring service (optional)
+  jetson-stats:
+    <<: *common-settings
+    image: ${REGISTRY:-ghcr.io}/${NAMESPACE:-facadedevil}/jetson-stats:${TAG:-latest}
+    container_name: ${STATS_CONTAINER:-jetson-stats}
+    profiles:
+      - monitoring
+    build:
+      context: ./docker/jetson-stats
+      dockerfile: Dockerfile
+    volumes:
+      - /run/jtop.sock:/run/jtop.sock:rw
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+    command: ["jtop", "-r"]
