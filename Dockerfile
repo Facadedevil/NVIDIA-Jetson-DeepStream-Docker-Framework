@@ -268,7 +268,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD test -f /sys/devices/gpu.0/load || exit 1
 
 # Add entrypoint script
-COPY docker/entrypoint.sh /entrypoint.sh
+COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Cleanup to reduce image size
