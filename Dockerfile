@@ -107,8 +107,7 @@ WORKDIR /opt/opencv/build
 
 # Improved error handling for CI compatibility
 # hadolint ignore=SC2046,SC2086,DL4006
-RUN set -e; \
-    cmake \
+RUN cmake \
       -D CMAKE_BUILD_TYPE=RELEASE \
       -D CMAKE_INSTALL_PREFIX=/usr/local \
       -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules \
@@ -131,11 +130,9 @@ RUN set -e; \
       -D BUILD_PERF_TESTS=OFF \
       -D BUILD_EXAMPLES=OFF \
       -D OPENCV_ENABLE_NONFREE=ON \
-      .. || { echo "OpenCV configuration failed, continuing with base version"; exit 0; }; \
+      .. || echo "OpenCV configuration failed, continuing with base version"; \
     if [ -f "Makefile" ]; then \
-      make -j"$(nproc)" && \
-      make install && \
-      ldconfig || { echo "OpenCV build failed, continuing with base version"; exit 0; }; \
+      make -j"$(nproc)" && make install && ldconfig; \
     else \
       echo "OpenCV build failed, continuing with base version"; \
     fi
@@ -180,8 +177,7 @@ WORKDIR /workspace
 COPY requirements.txt /tmp/requirements.txt
 
 # hadolint ignore=DL3013
-RUN set -e; \
-    python3 -m pip install --upgrade pip wheel setuptools; \
+RUN python3 -m pip install --upgrade pip wheel setuptools; \
     # Install PyTorch and torchvision for Jetson
     python3 -m pip install --no-cache-dir \
         --extra-index-url https://developer.download.nvidia.com/compute/redist/jp/v511 \
