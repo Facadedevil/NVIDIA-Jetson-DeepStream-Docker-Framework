@@ -33,6 +33,15 @@ log() {
 check_gpu() {
     log "INFO" "Checking Jetson GPU status..."
     
+    # Check if running in CI environment
+    if [ -n "${CI:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ]; then
+        log "INFO" "Running in CI environment, skipping GPU checks."
+        # Set default CUDA architecture for CI
+        export CUDA_ARCH_BIN="7.2"
+        export JETSON_MODEL="CI-Environment"
+        return 0
+    fi
+    
     # For Jetson, check if the tegra_stats file exists
     if [ ! -f "/sys/devices/gpu.0/load" ]; then
         log "ERROR" "Jetson GPU is not accessible. Please check your device mappings."
@@ -101,6 +110,12 @@ check_cuda_opencv() {
     # Check if OpenCV was built with CUDA support
     log "INFO" "Checking if OpenCV has CUDA support..."
     
+    # Check if running in CI environment
+    if [ -n "${CI:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ]; then
+        log "INFO" "Running in CI environment, skipping OpenCV CUDA check."
+        return 0
+    fi
+    
     # Try to import OpenCV and check CUDA availability
     if python3 -c "import cv2; print('CUDA available:', cv2.cuda.getCudaEnabledDeviceCount() > 0)" 2>/dev/null | grep -q "CUDA available: True"; then
         log "INFO" "OpenCV CUDA support verified."
@@ -113,11 +128,38 @@ check_cuda_opencv() {
     fi
 }
 
+install_opencv_packages() {
+    log "INFO" "Installing OpenCV packages via package manager..."
+    
+    # Install OpenCV with CUDA support using package manager
+    apt-get update
+    apt-get install -y --no-install-recommends \
+        python3-opencv \
+        libopencv-dev \
+        libopencv-contrib-dev \
+        libopencv-cuda-dev
+    
+    # Clean up apt cache
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+    
+    log "INFO" "OpenCV packages installed successfully."
+    touch /opt/.opencv_installed
+    return 0
+}
+
 build_opencv_on_device() {
     local opencv_version="4.8.0"
     local build_flag_file="/opt/.opencv_building"
     local built_flag_file="/opt/.opencv_built"
     local cuda_arch="${CUDA_ARCH_BIN}"
+    
+    # Check if running in CI environment
+    if [ -n "${CI:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ]; then
+        log "INFO" "Running in CI environment, using package manager for OpenCV instead of building from source."
+        install_opencv_packages
+        return 0
+    fi
     
     # Check if we've already built OpenCV
     if [ -f "$built_flag_file" ]; then
@@ -224,6 +266,12 @@ check_deepstream() {
     # Get DeepStream path from environment or use default
     DEEPSTREAM_DIR=${DEEPSTREAM_PATH:-/opt/nvidia/deepstream/deepstream-6.2}
     
+    # Check if running in CI environment
+    if [ -n "${CI:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ]; then
+        log "INFO" "Running in CI environment, skipping DeepStream check."
+        return 0
+    }
+    
     log "INFO" "Checking DeepStream installation at $DEEPSTREAM_DIR..."
     if [ ! -d "$DEEPSTREAM_DIR" ]; then
         log "ERROR" "DeepStream installation not found at $DEEPSTREAM_DIR"
@@ -251,6 +299,12 @@ check_deepstream() {
 
 check_dependencies() {
     log "INFO" "Checking dependencies..."
+
+    # Check if running in CI environment
+    if [ -n "${CI:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ]; then
+        log "INFO" "Running in CI environment, skipping device-specific dependency checks."
+        return 0
+    fi
 
     # Device-specific dependency checks
     local jetson_model="$JETSON_MODEL"
@@ -359,6 +413,16 @@ setup_environment() {
     fi
     export CUDA_ARCH_BIN
     
+    # Skip device-specific optimizations in CI environment
+    if [ -n "${CI:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ]; then
+        log "INFO" "Running in CI environment, using default environment settings."
+        export CUDA_UNIFIED_MEMORY=0
+        export JETSON_CLOCKS=0
+        export MAXN_MODE=0
+        export TRT_PRECISION_MODE=FP32
+        return 0
+    fi
+    
     # Set up Jetson-specific optimizations based on detected device
     local jetson_model="$JETSON_MODEL"
     
@@ -441,6 +505,18 @@ process_custom_extensions() {
 print_system_info() {
     log "INFO" "Collecting system information..."
     
+    # Check if running in CI environment
+    if [ -n "${CI:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ]; then
+        echo -e "${BLUE}======= NVIDIA Jetson DeepStream Container =======${NC}"
+        echo -e "${BLUE}========== Running in CI Environment =============${NC}"
+        echo -e "${GREEN}Environment:${NC} GitHub Actions CI"
+        echo -e "${GREEN}Mode:${NC} Testing"
+        echo -e "${GREEN}Container ID:${NC} $(hostname)"
+        echo -e "${GREEN}Started at:${NC} $(date)"
+        echo -e "${BLUE}==================================================${NC}"
+        return 0
+    fi
+    
     # Create system info header
     echo -e "${BLUE}======= NVIDIA Jetson DeepStream Container =======${NC}"
     echo -e "${BLUE}=============== System Information ===============${NC}"
@@ -482,6 +558,8 @@ print_system_info() {
         echo -e "${GREEN}OpenCV CUDA:${NC} Built on this device"
     elif [ -f "/opt/.opencv_building" ]; then
         echo -e "${GREEN}OpenCV CUDA:${NC} Currently building"
+    elif [ -f "/opt/.opencv_installed" ]; then
+        echo -e "${GREEN}OpenCV CUDA:${NC} Installed via package manager"
     else
         echo -e "${GREEN}OpenCV CUDA:${NC} Not enabled (using system version)"
     fi
@@ -512,7 +590,7 @@ print_system_info() {
     # GPU load for Jetson
     if [ -f "/sys/devices/gpu.0/load" ]; then
         local gpu_load
-        gpu_load=$(cat /sys/devices/gpu.0/load")
+        gpu_load=$(cat /sys/devices/gpu.0/load)
         echo -e "${GREEN}GPU Load:${NC} $gpu_load"
     fi
     
@@ -524,6 +602,13 @@ print_system_info() {
 }
 
 prompt_for_opencv_build() {
+    # Skip in CI environment
+    if [ -n "${CI:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ]; then
+        log "INFO" "Running in CI environment, installing OpenCV via package manager."
+        install_opencv_packages
+        return 0
+    }
+    
     echo -e "${YELLOW}=====================================================${NC}"
     echo -e "${YELLOW}  OpenCV without CUDA support detected                ${NC}"
     echo -e "${YELLOW}=====================================================${NC}"
@@ -566,10 +651,15 @@ prompt_for_opencv_build() {
 # Main execution
 log "INFO" "Starting NVIDIA Jetson DeepStream container initialization..."
 
-# Exit immediately if GPU is not accessible
+# Check for CI environment
+if [ -n "${CI:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ]; then
+    log "INFO" "Detected CI environment (GitHub Actions). Using simplified setup."
+fi
+
+# Exit immediately if GPU is not accessible (except in CI)
 check_gpu || exit 1
 
-# Exit immediately if DeepStream is not properly mounted
+# Exit immediately if DeepStream is not properly mounted (except in CI)
 check_deepstream || exit 1
 
 # Set up environment variables
@@ -582,7 +672,11 @@ check_dependencies
 check_workspace
 
 # Check if OpenCV has CUDA support and offer to build if not
-if [ -t 0 ] && [ -t 1 ]; then  # Only prompt if running in interactive mode
+if [ -n "${CI:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ]; then
+    # In CI environment, just install OpenCV packages
+    log "INFO" "CI environment: Installing OpenCV packages instead of building from source."
+    install_opencv_packages
+elif [ -t 0 ] && [ -t 1 ]; then  # Only prompt if running in interactive mode
     if [ ! -f "/opt/.opencv_cuda_enabled" ] && [ ! -f "/opt/.opencv_built" ] && [ ! -f "/opt/.opencv_building" ] && [ ! -f "/opt/.opencv_skip_build" ]; then
         if ! check_cuda_opencv; then
             prompt_for_opencv_build
