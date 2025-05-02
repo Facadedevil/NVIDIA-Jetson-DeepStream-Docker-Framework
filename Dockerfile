@@ -99,16 +99,15 @@ ARG CUDA_ARCH_BIN
 WORKDIR /opt
 
 # Clone and build OpenCV with CUDA support
-# Continue on error for CI compatibility
-# hadolint ignore=SC3037,SC2086
+# hadolint ignore=SC2046,DL3003
 RUN git clone --depth 1 --branch "${OPENCV_VERSION}" https://github.com/opencv/opencv.git && \
     git clone --depth 1 --branch "${OPENCV_VERSION}" https://github.com/opencv/opencv_contrib.git || true
 
 WORKDIR /opt/opencv/build
 
-# Continue on error for CI compatibility
-# hadolint ignore=SC3037,SC2086,DL4006
-RUN (cmake \
+# Improved error handling for CI compatibility
+# hadolint ignore=SC2046,SC2086,DL4006
+RUN cmake \
       -D CMAKE_BUILD_TYPE=RELEASE \
       -D CMAKE_INSTALL_PREFIX=/usr/local \
       -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules \
@@ -131,10 +130,14 @@ RUN (cmake \
       -D BUILD_PERF_TESTS=OFF \
       -D BUILD_EXAMPLES=OFF \
       -D OPENCV_ENABLE_NONFREE=ON \
-      .. && \
-    make -j"$(nproc)" && \
-    make install && \
-    ldconfig) || echo "OpenCV build failed, continuing with base version"
+      .. || echo "OpenCV configuration failed, continuing with base version" && \
+    if [ -f "Makefile" ]; then \
+      make -j"$(nproc)" && \
+      make install && \
+      ldconfig; \
+    else \
+      echo "OpenCV build failed, continuing with base version"; \
+    fi
 
 # Final image
 FROM base AS final
@@ -145,11 +148,10 @@ ARG TORCHVISION_VERSION
 WORKDIR /usr/local
 
 # Check if directories exist and create them for error-free copying
-# hadolint ignore=SC2015
 RUN mkdir -p lib include bin share/opencv4
 
 # Copy OpenCV from builder stage if build succeeded
-# hadolint ignore=SC2015,DL3022
+# hadolint ignore=DL3022
 COPY --from=opencv-builder /usr/local/lib/ /usr/local/lib/
 COPY --from=opencv-builder /usr/local/include/ /usr/local/include/
 COPY --from=opencv-builder /usr/local/bin/ /usr/local/bin/
@@ -176,31 +178,30 @@ WORKDIR /workspace
 # Install Python packages
 COPY requirements.txt /tmp/requirements.txt
 
-# hadolint ignore=DL3013,SC3037,SC2015,DL4006
+# hadolint ignore=DL3013
 RUN python3 -m pip install --upgrade pip wheel setuptools && \
     # Install PyTorch and torchvision for Jetson
-    # Continue on error for CI compatibility
-    (python3 -m pip install --no-cache-dir \
+    python3 -m pip install --no-cache-dir \
         --extra-index-url https://developer.download.nvidia.com/compute/redist/jp/v511 \
         nvidia-pyindex==1.0.9 \
         "torch==${PYTORCH_VERSION}" \
-        "torchvision==${TORCHVISION_VERSION}" || echo "PyTorch installation failed, continuing") && \
+        "torchvision==${TORCHVISION_VERSION}" || echo "PyTorch installation failed, continuing" && \
     # Install TensorFlow with GPU support for Jetson
-    (python3 -m pip install --no-cache-dir \
+    python3 -m pip install --no-cache-dir \
         --extra-index-url https://developer.download.nvidia.com/compute/redist/jp/v511 \
-        tensorflow==2.11.0+nv23.01 || echo "TensorFlow installation failed, continuing") && \
+        tensorflow==2.11.0+nv23.01 || echo "TensorFlow installation failed, continuing" && \
     # Install ONNX Runtime with GPU support
-    (python3 -m pip install --no-cache-dir onnxruntime-gpu==1.15.1 || echo "ONNX Runtime installation failed, continuing") && \
+    python3 -m pip install --no-cache-dir onnxruntime-gpu==1.15.1 || echo "ONNX Runtime installation failed, continuing" && \
     # Install TensorFlow Lite with GPU support
-    (python3 -m pip install --no-cache-dir tflite-runtime==2.14.0 || echo "TFLite installation failed, continuing") && \
+    python3 -m pip install --no-cache-dir tflite-runtime==2.14.0 || echo "TFLite installation failed, continuing" && \
     # Install other Python packages from requirements.txt
-    (python3 -m pip install --no-cache-dir -r /tmp/requirements.txt || echo "Some requirements failed to install, continuing") && \
+    python3 -m pip install --no-cache-dir -r /tmp/requirements.txt || echo "Some requirements failed to install, continuing" && \
     # Install additional ML dependencies with CUDA support
-    (python3 -m pip install --no-cache-dir \
+    python3 -m pip install --no-cache-dir \
         cupy-cuda11x==11.6.0 \
         numba==0.56.4 \
         pycuda==2023.1 \
-        ultralytics==8.0.196 || echo "ML dependencies installation failed, continuing") && \
+        ultralytics==8.0.196 || echo "ML dependencies installation failed, continuing" && \
     # Cleanup to reduce image size
     rm -rf /tmp/requirements.txt
 
@@ -223,7 +224,7 @@ RUN mkdir -p /opt/nvidia/deepstream/deepstream-6.2/lib && \
     touch /opt/nvidia/deepstream/deepstream-6.2/lib/libnvbufsurface.so && \
     touch /opt/nvidia/deepstream/deepstream-6.2/lib/libnvbufsurftransform.so
 
-# Create cache cleanup script using printf instead of echo
+# Create cache cleanup script
 RUN printf '#!/bin/bash\napt-get clean\nrm -rf /var/lib/apt/lists/*\nfind /tmp -type f -delete\nfind /var/tmp -type f -delete\nrm -rf ~/.cache/pip\n' > /usr/local/bin/cleanup-cache && \
     chmod +x /usr/local/bin/cleanup-cache
 
