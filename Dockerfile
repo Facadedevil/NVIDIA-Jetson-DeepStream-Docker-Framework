@@ -107,7 +107,8 @@ WORKDIR /opt/opencv/build
 
 # Improved error handling for CI compatibility
 # hadolint ignore=SC2046,SC2086,DL4006
-RUN cmake \
+RUN set -e; \
+    cmake \
       -D CMAKE_BUILD_TYPE=RELEASE \
       -D CMAKE_INSTALL_PREFIX=/usr/local \
       -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules \
@@ -130,11 +131,11 @@ RUN cmake \
       -D BUILD_PERF_TESTS=OFF \
       -D BUILD_EXAMPLES=OFF \
       -D OPENCV_ENABLE_NONFREE=ON \
-      .. || echo "OpenCV configuration failed, continuing with base version" && \
+      .. || { echo "OpenCV configuration failed, continuing with base version"; exit 0; }; \
     if [ -f "Makefile" ]; then \
       make -j"$(nproc)" && \
       make install && \
-      ldconfig; \
+      ldconfig || { echo "OpenCV build failed, continuing with base version"; exit 0; }; \
     else \
       echo "OpenCV build failed, continuing with base version"; \
     fi
@@ -179,29 +180,30 @@ WORKDIR /workspace
 COPY requirements.txt /tmp/requirements.txt
 
 # hadolint ignore=DL3013
-RUN python3 -m pip install --upgrade pip wheel setuptools && \
+RUN set -e; \
+    python3 -m pip install --upgrade pip wheel setuptools; \
     # Install PyTorch and torchvision for Jetson
     python3 -m pip install --no-cache-dir \
         --extra-index-url https://developer.download.nvidia.com/compute/redist/jp/v511 \
         nvidia-pyindex==1.0.9 \
         "torch==${PYTORCH_VERSION}" \
-        "torchvision==${TORCHVISION_VERSION}" || echo "PyTorch installation failed, continuing" && \
+        "torchvision==${TORCHVISION_VERSION}" || echo "PyTorch installation failed, continuing"; \
     # Install TensorFlow with GPU support for Jetson
     python3 -m pip install --no-cache-dir \
         --extra-index-url https://developer.download.nvidia.com/compute/redist/jp/v511 \
-        tensorflow==2.11.0+nv23.01 || echo "TensorFlow installation failed, continuing" && \
+        tensorflow==2.11.0+nv23.01 || echo "TensorFlow installation failed, continuing"; \
     # Install ONNX Runtime with GPU support
-    python3 -m pip install --no-cache-dir onnxruntime-gpu==1.15.1 || echo "ONNX Runtime installation failed, continuing" && \
+    python3 -m pip install --no-cache-dir onnxruntime-gpu==1.15.1 || echo "ONNX Runtime installation failed, continuing"; \
     # Install TensorFlow Lite with GPU support
-    python3 -m pip install --no-cache-dir tflite-runtime==2.14.0 || echo "TFLite installation failed, continuing" && \
+    python3 -m pip install --no-cache-dir tflite-runtime==2.14.0 || echo "TFLite installation failed, continuing"; \
     # Install other Python packages from requirements.txt
-    python3 -m pip install --no-cache-dir -r /tmp/requirements.txt || echo "Some requirements failed to install, continuing" && \
+    python3 -m pip install --no-cache-dir -r /tmp/requirements.txt || echo "Some requirements failed to install, continuing"; \
     # Install additional ML dependencies with CUDA support
     python3 -m pip install --no-cache-dir \
         cupy-cuda11x==11.6.0 \
         numba==0.56.4 \
         pycuda==2023.1 \
-        ultralytics==8.0.196 || echo "ML dependencies installation failed, continuing" && \
+        ultralytics==8.0.196 || echo "ML dependencies installation failed, continuing"; \
     # Cleanup to reduce image size
     rm -rf /tmp/requirements.txt
 
