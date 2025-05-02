@@ -126,24 +126,19 @@ jobs:
           sudo mkdir -p /opt/nvidia/deepstream/deepstream-6.2/sources
           echo "6.2.0" | sudo tee /opt/nvidia/deepstream/deepstream-6.2/version
           
-      # Set up NVIDIA container toolkit mock for CI
-      - name: Set up NVIDIA mock environment for CI
+      # Set up environment for CI instead of trying to create mock device files
+      - name: Set up CI environment
         run: |
-          # Create mock NVIDIA device files for CI
-          sudo mkdir -p /sys/devices/gpu.0/
-          echo "0" | sudo tee /sys/devices/gpu.0/load
+          # Create a .env file with CI environment variables
+          cat > .ci.env << EOF
+          CI=true
+          GITHUB_ACTIONS=true
+          JETSON_CI_BUILD=true
+          DEEPSTREAM_PATH=/opt/nvidia/deepstream/deepstream-6.2
+          CUDA_ARCH_BIN=${{ matrix.cuda_arch }}
+          EOF
           
-          # Create mock directories for Jetson libraries
-          sudo mkdir -p /usr/lib/aarch64-linux-gnu/tegra/
-          sudo touch /usr/lib/aarch64-linux-gnu/tegra/libnvbufsurface.so
-          sudo touch /usr/lib/aarch64-linux-gnu/tegra/libnvbufsurftransform.so
-          
-          # Create mock TensorRT library for detection
-          sudo mkdir -p /usr/lib/aarch64-linux-gnu/
-          sudo touch /usr/lib/aarch64-linux-gnu/libnvinfer.so
-          sudo ln -s /usr/lib/aarch64-linux-gnu/libnvinfer.so /usr/lib/aarch64-linux-gnu/libnvinfer.so.8.6.1
-          
-          # Make the entrypoint script executable if it exists
+          # Make sure entrypoint script is executable
           if [ -f "./entrypoint.sh" ]; then
             chmod +x ./entrypoint.sh
           elif [ -f "./docker/entrypoint.sh" ]; then
@@ -166,9 +161,12 @@ jobs:
           build-args: |
             JETPACK_BASE=nvcr.io/nvidia/l4t-jetpack:${{ matrix.jetpack }}
             CUDA_ARCH_BIN=${{ matrix.cuda_arch }}
+            CI=true
+            GITHUB_ACTIONS=true
+            JETSON_CI_BUILD=true
           platforms: linux/arm64
-          # Add CI environment variable to signal the image is being built in GitHub Actions
-          build-context: name=ci,env.CI=true,env.GITHUB_ACTIONS=true
+          # Add explicit environment variables through build-args
+          env-file: .ci.env
           
       # Sign the resulting Docker image digest except on PRs.
       # This will only write to the public Rekor transparency log when the Docker
@@ -192,6 +190,7 @@ jobs:
     env:
       CI: "true"
       GITHUB_ACTIONS: "true"
+      JETSON_CI_BUILD: "true"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -200,7 +199,7 @@ jobs:
         run: |
           if [ -f "./scripts/setup.sh" ]; then
             chmod +x ./scripts/setup.sh
-            CI=true GITHUB_ACTIONS=true ./scripts/setup.sh --help | grep "deepstream-path" || echo "Warning: setup.sh might be missing expected options"
+            CI=true GITHUB_ACTIONS=true JETSON_CI_BUILD=true ./scripts/setup.sh --help | grep "deepstream-path" || echo "Warning: setup.sh might be missing expected options"
           else
             echo "Warning: setup.sh not found in expected location"
           fi
@@ -209,7 +208,7 @@ jobs:
         run: |
           if [ -f "./scripts/run.sh" ]; then
             chmod +x ./scripts/run.sh
-            CI=true GITHUB_ACTIONS=true ./scripts/run.sh --help | grep "monitor" || echo "Warning: run.sh might be missing expected options"
+            CI=true GITHUB_ACTIONS=true JETSON_CI_BUILD=true ./scripts/run.sh --help | grep "monitor" || echo "Warning: run.sh might be missing expected options"
           else
             echo "Warning: run.sh not found in expected location"
           fi
@@ -220,7 +219,7 @@ jobs:
             mkdir -p config
             touch config/config.yaml
             chmod +x ./scripts/run.sh
-            CI=true GITHUB_ACTIONS=true ./scripts/run.sh export test_export --skip-build || echo "Warning: export functionality might not be working"
+            CI=true GITHUB_ACTIONS=true JETSON_CI_BUILD=true ./scripts/run.sh export test_export --skip-build || echo "Warning: export functionality might not be working"
           fi
           
   update-readme:
